@@ -2,11 +2,13 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"math"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/headzoo/surf"
 	"github.com/headzoo/surf/browser"
@@ -19,8 +21,9 @@ type Main struct {
 	User  User   `json:"user"`
 }
 
-// User ...
+// User contains user related details
 type User struct {
+	ID         string `json:"id"`
 	ImageLarge string `json:"image_large"`
 	Name       string `json:"name"`
 	PenName    string `json:"pen_name"`
@@ -34,20 +37,32 @@ type Page struct {
 // Post contains the post
 type Post struct {
 	Text           string `json:"text"`
+	Caption        string `json:"caption"`
 	LikeCount      int64  `json:"like_count"`
 	DateTimeString string `json:"published_datetime"`
 }
 
 func main() {
+	var user string
+	var start, end int
 	// ccq : Hasit Bhatt
-	user := "ccq"
-	posts, userObj := getListOfPosts(user, 0, 0)
-	f, err := os.Create(user + ".html")
+	flag.StringVar(&user, "user", "ccq", "userid")
+	flag.IntVar(&start, "start", 0, "page start")
+	flag.IntVar(&end, "end", 0, "page end")
+
+	flag.Parse()
+
+	posts, userObj := getListOfPosts(user, start, end)
+	writeUser(posts, userObj)
+}
+
+func writeUser(posts []Post, user User) {
+	f, err := os.Create(user.ID + ".html")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer f.Close()
-	f.WriteString(`<html>\n<head>
+	f.WriteString(`<html><head>
 	<script src="https://unpkg.com/pagedjs/dist/paged.polyfill.js"></script>
 	<style type="text/css">
 	@page {
@@ -72,10 +87,10 @@ func main() {
 		font-size: 1.25em;
 	}
 	</style>`)
-	f.WriteString("<title>" + userObj.Name + "</title>")
+	f.WriteString("<title>" + user.Name + "</title>")
 	f.WriteString(`</head>`)
 	f.WriteString("\n<body>\n")
-	f.WriteString(fmt.Sprintf("<h1>%s</h1>", userObj.Name))
+	f.WriteString(fmt.Sprintf("<h1>%s</h1>", user.Name))
 	for _, p := range posts {
 		text := strings.ReplaceAll(p.Text, "\n", "<br/>")
 		f.WriteString("<quote>")
@@ -110,7 +125,7 @@ func getListOfPosts(user string, start, end int) ([]Post, User) {
 		if !page.Page.HasNext {
 			break
 		}
-		// time.Sleep(2 * time.Second)
+		time.Sleep(100 * time.Millisecond)
 	}
 	return posts, userObj
 }
